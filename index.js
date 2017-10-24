@@ -21,39 +21,59 @@ PhpManifestPlugin.prototype.apply = function apply (compiler) {
 
   var phpClassName = optionOrFallback(options.phpClassName, 'WebpackBuiltFiles');
 
-  var getCssFiles = function(filelist, filepath) {
-    return _.map(_.filter(filelist, function (filename) {
-      return filename.endsWith('.css');
-    }), function(filename) {
-      if (!prefix) return path.join(filepath, filename);
+  var getCssFiles = function(assets, filepath) {
+    var files = Object.keys(assets)
+      .reduce(function (acc, name) {
+        ((_.isArray(assets[name])) ? assets[name] : [assets[name]])
+          .filter(function (filename) {
+            return filename.endsWith('.css');
+          })
+          .forEach(function (filename) {
+            if (!prefix) {
+              acc[name] = path.join(filepath, filename);
+            } else {
+              acc[name] = url.resolve(prefix, path.join(filepath, filename));
+            }
+          });
 
-      // Return url prefixed path if url exists
-      return url.resolve(prefix, path.join(filepath, filename));
-    });
+        return acc;
+      }, {});
+
+    return files;
   };
 
-  var getJsFiles = function(filelist, filepath) {
-    const files = _.map(_.filter(filelist, function (filename) {
-      return filename.endsWith('.js');
-    }), function(filename) {
-      if (!prefix) return path.join(filepath, filename);
+  var getJsFiles = function(assets, filepath) {
+    var files = Object.keys(assets)
+      .reduce(function (acc, name) {
+        ((_.isArray(assets[name])) ? assets[name] : [assets[name]])
+          .filter(function (filename) {
+            return filename.endsWith('.js');
+          })
+          .forEach(function (filename) {
+            if (!prefix) {
+              acc[name] = path.join(filepath, filename);
+            } else {
+              acc[name] = url.resolve(prefix, path.join(filepath, filename));
+            }
+          });
 
-      // Return url prefixed path if url exists
-      return url.resolve(prefix, path.join(filepath, filename));
-    });
+        return acc;
+      }, {});
 
     // Add webpack-dev-server js url
-    if (options.devServer) files.push(url.resolve(prefix, 'webpack-dev-server.js'));
+    if (options.devServer) {
+      files['webpack-dev-server'] = url.resolve(prefix, 'webpack-dev-server.js');
+    }
 
     return files;
   };
 
   var arrayToPhpStatic = function(list, varname) {
-    var out = '  static $' + varname + ' = [\n'
-    _.forEach(list, function (item) {
-      out += "    '" + item + "',";
+    var out = '\n  static $' + varname + ' = ['
+    _.forEach(list, function (item, name) {
+      out += "\n    '" + name + "' => '" + item + "',";
     });
-    out += '\n  ];\n';
+    out += '\n  ];';
     return out;
   };
 
@@ -65,7 +85,7 @@ PhpManifestPlugin.prototype.apply = function apply (compiler) {
     // Create a header string for the generated file:
     var out = '<?php\n'
       + phpClassComment(phpClassName)
-      + 'class ' + phpClassName + ' {\n';
+      + 'class ' + phpClassName + ' {';
 
     _.forEach(obj, function (list, name) {
       out += arrayToPhpStatic(list, name);
@@ -91,16 +111,10 @@ PhpManifestPlugin.prototype.apply = function apply (compiler) {
   compiler.plugin('emit', function(compilation, callback) {
 
     var stats = compilation.getStats().toJson();
-    var toInclude = [];
-
-    // Flatten the chunks (lists of files) to one list
-    for (var chunkName in stats.assetsByChunkName) {
-      toInclude = _.union(toInclude, stats.assetsByChunkName[chunkName]);
-    }
 
     var out = objectToPhpClass(phpClassName, {
-      jsFiles: getJsFiles(toInclude, filepath),
-      cssFiles: getCssFiles(toInclude, filepath)
+      jsFiles: getJsFiles(stats.assetsByChunkName, filepath),
+      cssFiles: getCssFiles(stats.assetsByChunkName, filepath)
     });
 
     // Write file using fs
