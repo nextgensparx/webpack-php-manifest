@@ -12,10 +12,22 @@ const optionOrFallback = (optionValue, fallbackValue) => optionValue !== undefin
 const withPrefix = (prefix) => (ext) => (assets, filepath) =>
   Object.keys(assets)
     .reduce((acc, name) => {
+      // Most of the time the properties of `assets` are just strings (the
+      // path to the created chunk) but sometimes (mostly for styles
+      // when using ExtractTextPlugin) a property can be an array containing
+      // several paths (i.e. ['styles.css', 'styles.js']).
       let chunk = ((_.isArray(assets[name])) ? assets[name] : [assets[name]])
         .filter(function (filename) {
           return filename.endsWith(ext);
         })
+        // Here we're assuming that you only want one of the
+        // paths in the array. Basically, this assertion should hold:
+        // .map((v, k, a) => {
+        //   if (a.length !== 1) {
+        //     throw new Error("Unexpected number of filenames for chunk.");
+        //   }
+        //   return v;
+        // })
         .reduce(function (_, filename) {
           return (!prefix)
             ? path.join(filepath, filename)
