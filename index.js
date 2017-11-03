@@ -9,6 +9,26 @@ function PhpManifestPlugin (options) {
 
 const optionOrFallback = (optionValue, fallbackValue) => optionValue !== undefined ? optionValue : fallbackValue;
 
+const withPrefix = (prefix) => (ext) => (assets, filepath) =>
+  Object.keys(assets)
+    .reduce((acc, name) => {
+      let chunk = ((_.isArray(assets[name])) ? assets[name] : [assets[name]])
+        .filter(function (filename) {
+          return filename.endsWith(ext);
+        })
+        .reduce(function (_, filename) {
+          return (!prefix)
+            ? path.join(filepath, filename)
+            : url.resolve(prefix, path.join(filepath, filename));
+        }, undefined);
+
+      if (chunk) {
+        acc[name] = chunk;
+      }
+
+      return acc;
+    }, {});
+
 PhpManifestPlugin.prototype.apply = function apply (compiler) {
   var options = this.options;
   // Get webpack options
@@ -16,49 +36,14 @@ PhpManifestPlugin.prototype.apply = function apply (compiler) {
   // Public path (like www), used when writing the file
   var prefix = options.pathPrefix ? options.pathPrefix : '';
   // By default, build the file with node fs. Can be included in webpack with an option.
-  var webpackBuild = options.webpackBuild ? options.webpackBuild : false;
   var output = optionOrFallback(options.output, 'assets-manifest') + '.php';
 
   var phpClassName = optionOrFallback(options.phpClassName, 'WebpackBuiltFiles');
 
-  var getCssFiles = function(assets, filepath) {
-    var files = Object.keys(assets)
-      .reduce(function (acc, name) {
-        ((_.isArray(assets[name])) ? assets[name] : [assets[name]])
-          .filter(function (filename) {
-            return filename.endsWith('.css');
-          })
-          .forEach(function (filename) {
-            if (!prefix) {
-              acc[name] = path.join(filepath, filename);
-            } else {
-              acc[name] = url.resolve(prefix, path.join(filepath, filename));
-            }
-          });
-
-        return acc;
-      }, {});
-
-    return files;
-  };
-
-  var getJsFiles = function(assets, filepath) {
-    var files = Object.keys(assets)
-      .reduce(function (acc, name) {
-        ((_.isArray(assets[name])) ? assets[name] : [assets[name]])
-          .filter(function (filename) {
-            return filename.endsWith('.js');
-          })
-          .forEach(function (filename) {
-            if (!prefix) {
-              acc[name] = path.join(filepath, filename);
-            } else {
-              acc[name] = url.resolve(prefix, path.join(filepath, filename));
-            }
-          });
-
-        return acc;
-      }, {});
+  var withExtension = withPrefix(prefix);
+  var getCssFiles = withExtension('.css');
+  var getJsFiles = function (assets, filepath) {
+    var files = withExtension('.js')(assets, filepath);
 
     // Add webpack-dev-server js url
     if (options.devServer) {
@@ -66,7 +51,7 @@ PhpManifestPlugin.prototype.apply = function apply (compiler) {
     }
 
     return files;
-  };
+  }
 
   var arrayToPhpStatic = function(list, varname) {
     var out = '\n  static $' + varname + ' = ['
@@ -105,16 +90,13 @@ PhpManifestPlugin.prototype.apply = function apply (compiler) {
     }
   }
 
-  // Get output path from webpack
-  var buildPath = compiler.options.output.path;
-
   compiler.plugin('emit', function(compilation, callback) {
 
     var stats = compilation.getStats().toJson();
 
     var out = objectToPhpClass(phpClassName, {
       jsFiles: getJsFiles(stats.assetsByChunkName, filepath),
-      cssFiles: getCssFiles(stats.assetsByChunkName, filepath)
+      cssFiles: getCssFiles(stats.assetsByChunkName, filepath),
     });
 
     // Write file using fs
