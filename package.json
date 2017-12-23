@@ -13,6 +13,7 @@
   ],
   "dependencies": {
     "lodash": "^4.17.4",
+    "mkdirp": "^0.5.1",
     "webpack": "^2.3.3"
   },
   "author": "Gabe Blair <gabe@castironcoding.com>",

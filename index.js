@@ -2,6 +2,7 @@ var _ = require('lodash')
 var path = require('path')
 var url = require('url')
 var fs = require('fs')
+var mkdirp = require('mkdirp');
 
 function PhpManifestPlugin (options) {
   this.options = options || {}
@@ -49,6 +50,8 @@ PhpManifestPlugin.prototype.apply = function apply (compiler) {
   var prefix = options.pathPrefix ? options.pathPrefix : '';
   // By default, build the file with node fs. Can be included in webpack with an option.
   var output = optionOrFallback(options.output, 'assets-manifest') + '.php';
+  var outputPath = path.join(
+    compiler.options.output.path, optionOrFallback(options.outputPath , '')); 
 
   var phpClassName = optionOrFallback(options.phpClassName, 'WebpackBuiltFiles');
 
@@ -92,14 +95,8 @@ PhpManifestPlugin.prototype.apply = function apply (compiler) {
     return out;
   };
 
-  var mkOutputDir = function(dir) {
-    // Make webpack output directory if it doesn't already exist
-    try {
-      fs.mkdirSync(dir);
-    } catch (err) {
-      // If it does exist, don't worry unless there's another error
-      if (err.code !== 'EEXIST') throw err;
-    }
+  var mkOutputPath = function(path) {
+    mkdirp.sync(path);
   }
 
   compiler.plugin('emit', function(compilation, callback) {
@@ -113,8 +110,8 @@ PhpManifestPlugin.prototype.apply = function apply (compiler) {
 
     // Write file using fs
     // Build directory if it doesn't exist
-    mkOutputDir(path.resolve(compiler.options.output.path));
-    fs.writeFileSync(path.join(compiler.options.output.path, output), out);
+    mkOutputPath(path.resolve(outputPath));
+    fs.writeFileSync(path.join(outputPath, output), out);
 
     callback();
   });

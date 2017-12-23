@@ -42,14 +42,19 @@ module.exports = {
 
 ## Available options:
 
-`output` (default: "assets-manifest")
+#### `output` (default: "assets-manifest")
 
-The name of the manifest file to write. Will be written to webpack's
-`output.path` directory and appended with `.php`.
+The name of the manifest file to write. Will be written to [`outputPath`](#outputPath) and appended with `.php`.
 
 &nbsp;&nbsp;
 
-`path` (default: "")
+#### `outputPath` (default: "")
+
+The path under webpack's `output.path` to which the manifest file will be written.
+
+&nbsp;&nbsp;
+
+#### `path` (default: "")
 
 The relative file path to the asset files. Example:
 ```javascript
@@ -60,14 +65,14 @@ const phpManifest = new PhpManifestPlugin({
 
 &nbsp;&nbsp;
 
-`pathPrefix` (default: "")
+#### `pathPrefix` (default: "")
 
 An optional absolute URL, that is prepended the asset file paths in php.
 Primarily used with the `devServer` option below.
 
 &nbsp;&nbsp;
 
-`devServer` (default: false)
+#### `devServer` (default: false)
 
 A flag that tells the plugin if webpack-dev-server is running, and adds
 `webpack-dev-server.js` to the list of JS assets in the file list.
@@ -83,17 +88,17 @@ const phpManifest = new PhpManifestPlugin({
   });
   ```
 
-  &nbsp;&nbsp;
+&nbsp;&nbsp;
 
-  `phpClassName` (default: "WebpackBuiltFiles")
+#### `phpClassName` (default: "WebpackBuiltFiles")
 
-  The PHP class name to use for the class. You can generally ignore this
-  unless you have a conflicting PHP class named `\WebpackBuiltFiles` in your PHP environment.
+The PHP class name to use for the class. You can generally ignore this
+unless you have a conflicting PHP class named `\WebpackBuiltFiles` in your PHP environment.
 
-  ## Consuming the manifest
+## Consuming the manifest
 
-  Currently there's only one implementation for consuming the generated manifest in a PHP application:
+Currently there's only one implementation for consuming the generated manifest in a PHP application:
 
-  #### October CMS
+#### October CMS
 
-  Use the October CMS plugin called [webpackassets-plugin](https://packagist.org/packages/castiron/webpackassets-plugin).
+Use the October CMS plugin called [webpackassets-plugin](https://packagist.org/packages/castiron/webpackassets-plugin).
